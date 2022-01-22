@@ -681,3 +681,311 @@ jenkins default home /var/lib/jenkins
 PollSCM  
 BuildPeriodically 
 Webhooks
+
+
+
+
+Lab:
+....
+
+configure your nexus server to jenkins and store the artifact to nexus
+configure your tomcat server to jenkins and deploy the Application to your tomcat.
+
+Nexus installation steps:
+........................
+Pre-reqs
+
+Java
+
+# installing java
+sudo yum list | grep -i java-1.8
+
+
+
+
+
+
+Lab:
+.....
+
+Launch 2ec2 instance(t2.medium)
+install tomcat
+Install nexus
+start nexus as a service
+create a repo in  nexus
+create a job in jenkins
+configure your nexus to your job
+configure your tomcat to your job
+store the Artifact in nexus repo
+deploy the App in tomcat
+
+
+ sudo su - jenkins -s /bin/bash
+
+
+
+username and password
+pem key
+ssh-keys
+
+
+pipelines:
+........
+scripted pipelines
+Declarative pipelines
+
+node{
+
+
+pipeline{
+
+
+
+build
+artficat storage
+deploy
+
+node {
+    def mvnHome
+    stage('Preparation') { // for display purposes
+        // Get some code from a GitHub repository
+        git 'https://github.com/jglick/simple-maven-project-with-tests.git'
+        // Get the Maven tool.
+        // ** NOTE: This 'M3' Maven tool must be configured
+        // **       in the global configuration.
+        mvnHome = tool 'M3'
+    }
+    stage('Build') {
+        // Run the maven build
+        withEnv(["MVN_HOME=$mvnHome"]) {
+            if (isUnix()) {
+                sh '"$MVN_HOME/bin/mvn" -Dmaven.test.failure.ignore clean package'
+            } else {
+                bat(/"%MVN_HOME%\bin\mvn" -Dmaven.test.failure.ignore clean package/)
+            }
+        }
+    }
+    stage('Results') {
+        junit '**/target/surefire-reports/TEST-*.xml'
+        archiveArtifacts 'target/*.jar'
+    }
+}
+
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+		stage('checkout') {
+		steps{
+		checkout(
+		[
+		$class: 'GitSCM', branches: [
+		[
+		name: '*/master']
+		], 
+		extensions: [],
+		userRemoteConfigs: [
+		[
+		credentialsId: 'Github', url: 'https://github.com/Bhanukiran213/myapp.git']
+		]
+		]
+		)
+    }
+ }
+ 
+
+
+
+
+
+pipeline {
+    agent {
+  label 'slave'
+}
+     environment {
+  PATH = "/opt/maven/bin:$PATH"
+}
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+		stage('checkout') {
+		steps {
+		checkout(
+		[
+		$class: 'GitSCM', 
+		branches: [
+		[name: '*/master'
+		]
+		], 
+		extensions: [
+		],
+		userRemoteConfigs: [
+		[
+		credentialsId: 'Github', url: 'https://github.com/Bhanukiran213/hello-world-war.git']
+		]
+		]
+		)
+    }
+}
+  stage('build'){
+  steps{
+  sh 'mvn package'
+  }
+ }
+ stage ('Artifact upload') {
+ steps{
+ nexusArtifactUploader artifacts: 
+ [
+ [
+ artifactId: 'hello-world-war', 
+ classifier: '',
+ file: '/home/ec2-user/workspace/devopslearning/target/hello-world-war-2.0.3.war', 
+ type: 'war'
+ ]
+ ], 
+ credentialsId: 'Nexus-cred',
+ groupId: 'com.efsavage',
+ nexusUrl: '15.206.211.97:8081', 
+ nexusVersion: 'nexus3', 
+ protocol: 'http', 
+ repository: 'myrepo', 
+ version: '2.0.3' 
+   }
+  }
+ }
+} 
+
+
+Dev ----- Dev Branch 
+stg ------- stg
+prod ------ master
+
+
+Ansible: Ansible is an configuration management tool
+
+cheif
+puppet
+
+
+
+Ansible will work on ssh protocal
+Ansible is an Agentless
+Ansible is an push based
+Ansible built on python
+
+Installation steps for Ansible:
+..............................
+
+Amzon linux:
+...........
+#Enable Epel
+sudo amazon-linux-extras install epel -y
+
+# Install Ansible
+yum install ansible -y 
+
+
+centos:
+.......
+# Enable Epel
+sudo yum install epel-release -y
+
+# Install Ansible
+sudo yum install Ansible -y
+
+
+
+modules:
+.......
+copy
+shell
+ping
+yum
+command
+file
+group
+user
+setup
+git
+lineinfile
+
+
+test.txt
+
+
+ansible all -i demo_file -l testservers -m ping
+
+
+ ansible all -i demo_file  -m ping
+ 
+ ansible all -i demo_file -m setup
+ 
+ 
+ demo.txt
+ 
+ ansible all -i demo_file -l testservers -m copy -a "src=/home/ec2-user/demo.txt dest=/home/ec2-user/"
+ 
+ ansible all -i demo_file -l appservers -m copy -a "src=//home/ec2-user/test.txt dest=/home/centos/kiran/"
+
+
+ansible testservers -m shell -a "mkdir /opt/kiran" --private-key=/home/ec2-user/.ssh/id_rsa
+
+
+ansible testservers -m command -a "mkdir /opt/learndevops" --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+
+ansible testservers -m shell -a "cat /home/ec2-user/demo.txt | grep -i testing" --private-key=/home/ec2-user/.ssh/id_rsa
+
+ cat demo.txt | grep -i testing
+
+file module
+yum
+ differnece between adhoc commands and playbook
+ 
+ write sample playbooks
+ 
+Integrate ansible to jenkins
+execuitethe playbook from jenkins using jenkinsfile
+
+
+
+ansible testservers -m shell -a "echo "this is for testing" > test.txt"
+
+
+ansible testservers -m command -a "ls -l /opt" --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+
+
+ansible testservers -m file -a "dest=/opt/devops.txt state=touch" --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+ansible testservers -m file -a "dest=/opt/devopslearning state=directory owner=ec2-user" --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+
+
+ansible testservers -m command -a "ls -l /opt" --private-key=/home/ec2-user/.ssh/id_rsa -b
+
+
+ansible testservers -m file -a "dest=/opt/cloud.txt state=touch mode=600 owner=ec2-user group=ec2-user" --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+
+ansible webservers -m yum -a "name=httpd state=present" -u centos --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+ansible webservers -m service -a "name=httpd state=started" -u centos --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+ansible webservers -m service -a "name=httpd state=stopped" -u centos --private-key=/home/ec2-user/.ssh/id_rsa --become
+
+
+ansible webservers -m shell -a "ps -ef | grep -i httpd" -u centos --private-key=/home/ec2-user/.ssh/id_rsa
+
+
+
+configuration file for ansible: /etc/ansible/ansible.conf
